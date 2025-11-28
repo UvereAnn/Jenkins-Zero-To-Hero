@@ -1,21 +1,51 @@
 pipeline {
-  agent none
-  stages {
-    stage('Back-end') {
-      agent {
-        docker { image 'maven:3.8.1-adoptopenjdk-11' }
-      }
-      steps {
-        sh 'mvn --version'
-      }
+    agent none 
+    stages {
+        stage('Back-end') {
+            agent {
+                docker { 
+                    image 'maven:3.8.1-adoptopenjdk-11'
+                }
+            }
+            steps {
+                // Example: Compiling the back-end code
+                sh 'mvn --version'
+                // sh 'mvn clean install' // Actual build command would go here
+            }
+        }
+        
+        stage('Front-end') {
+            agent {
+                docker { 
+                    image 'node:16-alpine'
+                }
+            }
+            steps {
+                // Example: Building the front-end code
+                sh 'node --version'
+                // sh 'npm install && npm run build' // Actual build command would go here
+            }
+        }
+        
+        stage('Deploy Application') {
+            // Deploying requires access to the host's Docker daemon to run a persistent container.
+            // Using 'agent any' or an explicit 'node' ensures we run on the host/agent machine.
+            agent any 
+            steps {
+                script {
+                    // 1. Stop and remove old container (ignore errors if it's not running)
+                    sh 'docker stop my-app-container || true'
+                    sh 'docker rm my-app-container || true'
+                    
+                    // 2. Build the new Docker image (requires a Dockerfile in the repo root)
+                    sh 'docker build -t my-app-image:latest .' 
+                    
+                    // 3. Run the new container in detached mode (-d)
+                    sh 'docker run -d --name my-app-container -p 8080:8080 my-app-image:latest'
+                    
+                    echo "Application container deployed and running!"
+                }
+            }
+        }
     }
-    stage('Front-end') {
-      agent {
-        docker { image 'node:16-alpine' }
-      }
-      steps {
-        sh 'node --version'
-      }
-    }
-  }
 }
